@@ -1,0 +1,97 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─── Base Styles ───────────────────────────────────── */
+@layer base {
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #1e1f23;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #3f4249;
+    border-radius: 3px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #61656f;
+  }
+}
+
+/* ─── Reusable Component Classes ────────────────────── */
+@layer components {
+  /* Glass card effect */
+  .glass-card {
+    @apply bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl shadow-glass;
+  }
+
+  /* Eco gradient button */
+  .btn-eco {
+    @apply bg-gradient-eco text-white font-semibold py-3 px-6 rounded-xl
+           shadow-eco hover:shadow-eco-lg
+           transform hover:-translate-y-0.5
+           transition-all duration-300 ease-out
+           focus:outline-none focus:ring-2 focus:ring-eco-400 focus:ring-offset-2 focus:ring-offset-dark-950;
+  }
+
+  /* Ghost button */
+  .btn-ghost {
+    @apply bg-transparent text-eco-400 font-medium py-3 px-6 rounded-xl
+           border border-eco-400/30 hover:border-eco-400
+           hover:bg-eco-400/10
+           transition-all duration-300 ease-out
+           focus:outline-none focus:ring-2 focus:ring-eco-400 focus:ring-offset-2 focus:ring-offset-dark-950;
+  }
+
+  /* Input field */
+  .input-eco {
+    @apply w-full bg-dark-900/50 border border-dark-700 text-white
+           placeholder-dark-400 rounded-xl px-4 py-3
+           focus:outline-none focus:border-eco-500 focus:ring-1 focus:ring-eco-500
+           transition-all duration-300;
+  }
+
+  /* Card */
+  .card-eco {
+    @apply bg-dark-900/60 backdrop-blur-md border border-dark-700/50
+           rounded-2xl p-6 shadow-dark
+           hover:border-eco-500/30
+           transition-all duration-300;
+  }
+
+  /* Text gradient */
+  .text-gradient-eco {
+    @apply bg-gradient-eco bg-clip-text text-transparent;
+  }
+
+  /* Section container */
+  .container-eco {
+    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+  }
+}
+
+/* ─── Utility Animations ────────────────────────────── */
+@layer utilities {
+  .animate-delay-100 { animation-delay: 100ms; }
+  .animate-delay-200 { animation-delay: 200ms; }
+  .animate-delay-300 { animation-delay: 300ms; }
+  .animate-delay-500 { animation-delay: 500ms; }
+}
