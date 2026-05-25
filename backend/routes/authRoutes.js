@@ -10,6 +10,7 @@ const {
   resetPassword,
   googleCallback,
   logout,
+  updateProfile,
 } = require('../controllers/authController');
 
 const { protect } = require('../middleware/auth');
@@ -44,6 +45,7 @@ router.get(
 
 // ─── Protected Routes ────────────────────────────────────
 router.get('/me', protect, getMe);
+router.put('/update-profile', protect, updateProfile);
 router.post('/logout', protect, logout);
 
 module.exports = router;

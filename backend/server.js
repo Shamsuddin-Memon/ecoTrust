@@ -43,6 +43,7 @@ app.use('/api/notifications', require('./routes/notificationRoutes'));
 // Future module routes will be added here:
 app.use('/api/projects', require('./routes/projectRoutes'));
 app.use('/api/plantations', require('./routes/plantationRoutes'));
+app.use('/api/users', require('./routes/userRoutes'));
 // app.use('/api/documents', require('./routes/documentRoutes'));
 
 // ─── Health Check ───────────────────────────────────────

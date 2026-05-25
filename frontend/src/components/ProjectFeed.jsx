@@ -1,10 +1,49 @@
 import { useState, useEffect } from 'react';
-import { HiGlobeAlt, HiX, HiLocationMarker } from 'react-icons/hi';
+import { useNavigate } from 'react-router-dom';
+import { HiGlobeAlt, HiX, HiLocationMarker, HiShieldCheck } from 'react-icons/hi';
 import projectService from '../services/projectService';
 import useAuth from '../hooks/useAuth';
 
+// ─── Trust Score Badge ───────────────────────────────────
+const TrustScoreBadge = ({ score, size = 'sm' }) => {
+  if (score === undefined || score === null) return null;
+  
+  let color, label;
+  if (score >= 80) {
+    color = 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20';
+    label = 'Highly Trusted';
+  } else if (score >= 60) {
+    color = 'text-amber-400 bg-amber-500/10 border-amber-500/20';
+    label = 'Trusted';
+  } else if (score >= 40) {
+    color = 'text-orange-400 bg-orange-500/10 border-orange-500/20';
+    label = 'Building Trust';
+  } else {
+    color = 'text-dark-400 bg-dark-700/50 border-dark-600/30';
+    label = 'New NGO';
+  }
+
+  if (size === 'lg') {
+    return (
+      <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full border ${color}`}>
+        <HiShieldCheck size={16} />
+        <span className="text-xs font-bold">{score}</span>
+        <span className="text-[10px] font-medium opacity-80">{label}</span>
+      </div>
+    );
+  }
+
+  return (
+    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-[10px] font-bold ${color}`}>
+      <HiShieldCheck size={12} />
+      {score}
+    </span>
+  );
+};
+
 const ProjectFeed = ({ refreshKey = 0 }) => {
   const { token } = useAuth();
+  const navigate = useNavigate();
   const [projects, setProjects] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedProject, setSelectedProject] = useState(null); // Used to render the expansion modal
@@ -65,7 +104,7 @@ const ProjectFeed = ({ refreshKey = 0 }) => {
               {/* Load accurate cover image from Database, fallback to placeholder */}
               {proj.fieldData?.imageUrl || (proj.fieldData?.imageUrls && proj.fieldData.imageUrls.length > 0) ? (
                 <img 
-                  src={`http://localhost:5000${proj.fieldData.imageUrls?.[0] || proj.fieldData.imageUrl}`} 
+                  src={`http://localhost:5000/${(proj.fieldData.imageUrls?.[0] || proj.fieldData.imageUrl).replace(/\\/g, '/').replace(/^\//, '')}`} 
                   alt="Project Cover" 
                   className="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" 
                 />
@@ -84,7 +123,10 @@ const ProjectFeed = ({ refreshKey = 0 }) => {
             
             <div className="p-5 flex-1 flex flex-col pointer-events-none">
               <h4 className="text-lg font-bold text-white mb-1 group-hover:text-eco-400 transition-colors line-clamp-1">{proj.title}</h4>
-              <p className="text-xs text-eco-400 font-bold mb-3 uppercase tracking-wider">{proj.ngoCompanyName || 'Verified NGO'}</p>
+              <p className="text-xs text-eco-400 font-bold mb-3 uppercase tracking-wider flex items-center gap-2">
+                {proj.ngoCompanyName || 'Verified NGO'}
+                <TrustScoreBadge score={proj.trustScore} />
+              </p>
               
               <p className="text-dark-300 text-sm mb-4 line-clamp-2">{proj.description}</p>
               
@@ -125,13 +167,13 @@ const ProjectFeed = ({ refreshKey = 0 }) => {
                   {selectedProject.fieldData.imageUrls.map((imgUrl, idx) => (
                       <div key={idx} className="w-full h-full flex-shrink-0 snap-center relative group/img">
                         <img 
-                          src={`http://localhost:5000${imgUrl}`} 
+                          src={`http://localhost:5000/${imgUrl.replace(/\\/g, '/').replace(/^\//, '')}`} 
                           className="w-full h-full object-cover" 
                           alt={`Cover ${idx}`} 
                         />
                         <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/img:opacity-100 transition-opacity bg-black/30 backdrop-blur-sm z-20 pointer-events-none">
                             <button 
-                                onClick={(e) => { e.stopPropagation(); setFullscreenImage(`http://localhost:5000${imgUrl}`); }}
+                                onClick={(e) => { e.stopPropagation(); setFullscreenImage(`http://localhost:5000/${imgUrl.replace(/\\/g, '/').replace(/^\//, '')}`); }}
                                 className="bg-dark-900/80 hover:bg-eco-500 text-white font-medium py-2 px-6 rounded-full pointer-events-auto transition-colors shadow-lg"
                             >
                                 View Full Picture
@@ -142,10 +184,10 @@ const ProjectFeed = ({ refreshKey = 0 }) => {
                 </div>
               ) : selectedProject.fieldData?.imageUrl ? (
                 <div className="w-full h-full relative group/img">
-                    <img src={`http://localhost:5000${selectedProject.fieldData.imageUrl}`} className="w-full h-full object-cover" alt="Cover" />
+                    <img src={`http://localhost:5000/${selectedProject.fieldData.imageUrl.replace(/\\/g, '/').replace(/^\//, '')}`} className="w-full h-full object-cover" alt="Cover" />
                     <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/img:opacity-100 transition-opacity bg-black/30 backdrop-blur-sm z-20 pointer-events-none">
                         <button 
-                            onClick={(e) => { e.stopPropagation(); setFullscreenImage(`http://localhost:5000${selectedProject.fieldData.imageUrl}`); }}
+                            onClick={(e) => { e.stopPropagation(); setFullscreenImage(`http://localhost:5000/${selectedProject.fieldData.imageUrl.replace(/\\/g, '/').replace(/^\//, '')}`); }}
                             className="bg-dark-900/80 hover:bg-eco-500 text-white font-medium py-2 px-6 rounded-full pointer-events-auto transition-colors shadow-lg"
                         >
                             View Full Picture
@@ -162,7 +204,18 @@ const ProjectFeed = ({ refreshKey = 0 }) => {
                   {selectedProject.category}
                 </span>
                 <h2 className="text-3xl sm:text-4xl font-black text-white leading-tight shadow-sm">{selectedProject.title}</h2>
-                <p className="text-eco-400 font-bold mt-1 text-sm sm:text-base">Organized by {selectedProject.ngoCompanyName}</p>
+                <p className="text-eco-400 font-bold mt-1 text-sm sm:text-base flex items-center gap-2 flex-wrap">
+                  Organized by {selectedProject.ngoCompanyName}
+                  <TrustScoreBadge score={selectedProject.trustScore} size="lg" />
+                  {selectedProject.ngoId && (
+                    <button 
+                      onClick={() => navigate(`/ngo/profile/${selectedProject.ngoId._id || selectedProject.ngoId}`)}
+                      className="ml-2 bg-eco-500/10 hover:bg-eco-500 hover:text-white text-eco-400 text-xs font-bold py-1 px-3 rounded-lg border border-eco-500/20 transition-all cursor-pointer pointer-events-auto shadow-md"
+                    >
+                      View NGO Profile
+                    </button>
+                  )}
+                </p>
                 {selectedProject.fieldData?.imageUrls?.length > 1 && (
                      <p className="text-dark-300 text-xs mt-2 animate-pulse">Scroll horizontally for more pictures ({selectedProject.fieldData.imageUrls.length})</p>
                 )}

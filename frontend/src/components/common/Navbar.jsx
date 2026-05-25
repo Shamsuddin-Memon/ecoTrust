@@ -152,9 +152,9 @@ const Navbar = () => {
 
                 {/* User Info */}
                 <div className="flex items-center gap-3 pl-6 border-l border-dark-700">
-                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-dark-800/50">
-                    {roleInfo && <span className="text-sm">{roleInfo.icon}</span>}
-                    <span className="text-sm font-medium text-dark-200">{user?.name}</span>
+                  <Link to="/profile" className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-dark-800/50 hover:bg-dark-800/80 transition-colors group" title="View Profile">
+                    {roleInfo && <span className="text-sm group-hover:scale-110 transition-transform">{roleInfo.icon}</span>}
+                    <span className="text-sm font-medium text-dark-200 group-hover:text-eco-400 transition-colors">{user?.name}</span>
                     {roleInfo && (
                       <span
                         className="text-xs px-2 py-0.5 rounded-full font-medium"
@@ -163,7 +163,7 @@ const Navbar = () => {
                         {roleInfo.label}
                       </span>
                     )}
-                  </div>
+                  </Link>
                   <button onClick={handleLogout} className="p-2 rounded-lg text-dark-400 hover:text-red-400 hover:bg-red-400/10 transition-all" title="Logout">
                     <HiLogout size={20} />
                   </button>
@@ -189,17 +189,18 @@ const Navbar = () => {
           <div className="px-4 py-4 space-y-2">
             {isAuthenticated ? (
               <>
-                <div className="flex items-center justify-between px-4 py-3 rounded-xl bg-dark-800/50 mb-3">
+                <Link to="/profile" onClick={() => setMobileOpen(false)} className="flex items-center justify-between px-4 py-3 rounded-xl bg-dark-800/50 hover:bg-dark-800 mb-3 border border-dark-700/30 group transition-all">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-gradient-eco flex items-center justify-center">
+                    <div className="w-10 h-10 rounded-full bg-gradient-eco flex items-center justify-center group-hover:scale-105 transition-transform">
                       <HiUser size={20} className="text-white" />
                     </div>
                     <div>
-                      <p className="text-sm font-semibold text-white">{user?.name}</p>
+                      <p className="text-sm font-semibold text-white group-hover:text-eco-400 transition-colors">{user?.name}</p>
                       <p className="text-xs text-dark-400">{roleInfo?.label}</p>
                     </div>
                   </div>
-                </div>
+                  <span className="text-xs text-eco-400 font-semibold group-hover:translate-x-1 transition-transform">Edit Profile →</span>
+                </Link>
                 <Link to="/dashboard" onClick={() => setMobileOpen(false)} className="block px-4 py-3 rounded-xl text-dark-200 hover:text-white hover:bg-dark-800 transition-all">Dashboard</Link>
                 {user?.role === 'admin' && (
                   <Link to="/admin/ngos" onClick={() => setMobileOpen(false)} className="block px-4 py-3 rounded-xl text-dark-200 hover:text-white hover:bg-dark-800 transition-all">Admin Panel</Link>

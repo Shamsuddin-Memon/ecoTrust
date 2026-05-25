@@ -25,9 +25,38 @@ const getPlantationsByProject = async (projectId, token) => {
   return response.data;
 };
 
+// ─── Admin Methods ─────────────────────────────────────────
+const getPendingPlantations = async (token) => {
+  const config = { headers: { Authorization: `Bearer ${token}` } };
+  const response = await axios.get(`${API_URL}/admin/pending`, config);
+  return response.data;
+};
+
+const getPlantationById = async (id, token) => {
+  const config = { headers: { Authorization: `Bearer ${token}` } };
+  const response = await axios.get(`${API_URL}/${id}`, config);
+  return response.data;
+};
+
+const approvePlantation = async (id, token) => {
+  const config = { headers: { Authorization: `Bearer ${token}` } };
+  const response = await axios.put(`${API_URL}/${id}/approve`, {}, config);
+  return response.data;
+};
+
+const rejectPlantation = async (id, reason, token) => {
+  const config = { headers: { Authorization: `Bearer ${token}` } };
+  const response = await axios.put(`${API_URL}/${id}/reject`, { reason }, config);
+  return response.data;
+};
+
 const plantationService = {
   uploadPlantationData,
   getPlantationsByProject,
+  getPendingPlantations,
+  getPlantationById,
+  approvePlantation,
+  rejectPlantation,
 };
 
 export default plantationService;

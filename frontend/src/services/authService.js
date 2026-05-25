@@ -45,6 +45,12 @@ const authService = {
    * Get Google OAuth URL — redirects browser to Google login
    */
   getGoogleAuthUrl: () => '/api/auth/google',
+
+  /**
+   * Update the user profile (name, email, password)
+   * @param {{ name?: string, email?: string, password?: string }} data
+   */
+  updateProfile: (data) => api.put('/auth/update-profile', data),
 };
 
 export default authService;

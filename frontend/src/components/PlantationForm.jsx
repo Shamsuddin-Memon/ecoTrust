@@ -159,9 +159,9 @@ const PlantationForm = () => {
       formData.append('longitude', longitude);
       formData.append('treeCount', treeCount);
 
-      await plantationService.uploadPlantationData(formData, token);
+      const result = await plantationService.uploadPlantationData(formData, token);
       
-      setSuccess(`Success! ${formMode === 'new' ? 'Project created and ' : ''}Field data uploaded & queued for AI verification!`);
+      setSuccess(`✅ ${formMode === 'new' ? 'Project created and ' : ''}Plantation submitted! AI verified ${result.aiTreeCount || '?'} trees (${result.confidenceScore || '?'}% confidence). Sent for admin review.`);
       
       setImages([]);
       setImagePreviews([]);
@@ -176,7 +176,12 @@ const PlantationForm = () => {
       }
 
     } catch (err) {
-      setError(err.response?.data?.message || err.response?.data?.errors?.[0]?.msg || 'Action failed.');
+      const errData = err.response?.data;
+      if (errData?.mismatch) {
+        setError(`🔍 Tree count mismatch: You reported ${errData.userTreeCount} trees but AI detected ${errData.aiTreeCount} trees. Please verify your count or re-upload a clearer image.`);
+      } else {
+        setError(errData?.message || errData?.errors?.[0]?.msg || 'Action failed.');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -338,6 +343,14 @@ const PlantationForm = () => {
             {/* Image Upload */}
             <div>
                 <label className="block text-dark-300 text-sm font-medium mb-1">Photographic Evidence <span className="text-dark-500 font-normal">(Max 10 images)</span></label>
+                
+                {/* AI Guidance Message */}
+                <div className="mb-3 p-3 rounded-xl bg-sky-500/10 border border-sky-500/20 flex items-start gap-2">
+                  <span className="text-lg">📡</span>
+                  <p className="text-sky-300 text-xs leading-relaxed">
+                    <span className="font-bold">Please upload a satellite or drone image of your plantation area.</span> Our AI model will analyze the image to verify tree count. Make sure the image clearly shows the planted trees for accurate verification.
+                  </p>
+                </div>
                 
                 <div className="space-y-4">
                   {/* File Imput Trigger */}

@@ -28,6 +28,11 @@ const ngoService = {
    * Admin: Decline NGO
    */
   declineNGO: (id, reason) => api.put(`/ngos/admin/${id}/decline`, { reason }),
+
+  /**
+   * Get NGO public profile (trust score, stats)
+   */
+  getNGOProfile: (userId) => api.get(`/ngos/profile/${userId}`),
 };
 
 export default ngoService;

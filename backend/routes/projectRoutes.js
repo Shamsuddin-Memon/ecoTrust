@@ -1,5 +1,5 @@
 const express = require('express');
-const { createProject, getMyProjects, getPendingProjects, approveProject, declineProject, getGlobalProjects, updateProject, deleteProject } = require('../controllers/projectController');
+const { createProject, getMyProjects, getPendingProjects, approveProject, declineProject, getGlobalProjects, updateProject, deleteProject, getAllProjectsAdmin, getNGOProjects } = require('../controllers/projectController');
 const { protect } = require('../middleware/auth');
 const { authorize } = require('../middleware/roleCheck');
 const { body, validationResult } = require('express-validator');
@@ -24,13 +24,15 @@ const validateProject = [
 router.post('/', protect, authorize('ngo'), validateProject, createProject);
 router.get('/my-projects', protect, authorize('ngo'), getMyProjects);
 router.get('/global', protect, getGlobalProjects);
+router.get('/ngo/:userId', protect, getNGOProjects);
 
-// NGO: Edit / Delete own project
-router.put('/:id', protect, authorize('ngo'), updateProject);
-router.delete('/:id', protect, authorize('ngo'), deleteProject);
+// NGO / Admin: Edit / Delete project
+router.put('/:id', protect, authorize('ngo', 'admin'), updateProject);
+router.delete('/:id', protect, authorize('ngo', 'admin'), deleteProject);
 
 // Admin Routes
 router.get('/admin/pending', protect, authorize('admin'), getPendingProjects);
+router.get('/admin/all', protect, authorize('admin'), getAllProjectsAdmin);
 router.put('/:id/approve', protect, authorize('admin'), approveProject);
 router.put('/:id/decline', protect, authorize('admin'), declineProject);
 

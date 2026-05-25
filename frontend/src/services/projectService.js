@@ -41,9 +41,15 @@ const approveProject = async (id, token) => {
   return response.data;
 };
 
-const declineProject = async (id, token) => {
+const declineProject = async (id, reason, token) => {
   const config = { headers: { Authorization: `Bearer ${token}` } };
-  const response = await axios.put(`${API_URL}/${id}/decline`, {}, config);
+  const response = await axios.put(`${API_URL}/${id}/decline`, { reason }, config);
+  return response.data;
+};
+
+const getNGOProjects = async (userId, token) => {
+  const config = { headers: { Authorization: `Bearer ${token}` } };
+  const response = await axios.get(`${API_URL}/ngo/${userId}`, config);
   return response.data;
 };
 
@@ -59,6 +65,12 @@ const deleteProject = async (id, token) => {
   return response.data;
 };
 
+const getAllProjectsAdmin = async (token) => {
+  const config = { headers: { Authorization: `Bearer ${token}` } };
+  const response = await axios.get(`${API_URL}/admin/all`, config);
+  return response.data;
+};
+
 const projectService = {
   createProject,
   getMyProjects,
@@ -66,8 +78,10 @@ const projectService = {
   getGlobalProjects,
   approveProject,
   declineProject,
+  getNGOProjects,
   updateProject,
   deleteProject,
+  getAllProjectsAdmin,
 };
 
 export default projectService;

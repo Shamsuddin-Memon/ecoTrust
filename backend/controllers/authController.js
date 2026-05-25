@@ -280,6 +280,109 @@ exports.googleCallback = async (req, res, next) => {
 };
 
 // ────────────────────────────────────────────────────────
+// @desc    Update current logged-in user profile
+// @route   PUT /api/auth/update-profile
+// @access  Private
+// ────────────────────────────────────────────────────────
+exports.updateProfile = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found',
+      });
+    }
+
+    const { name, email, password } = req.body;
+
+    // Validate Name
+    if (name !== undefined) {
+      const trimmedName = name.trim();
+      if (!trimmedName) {
+        return res.status(400).json({ success: false, message: 'Name cannot be empty' });
+      }
+      if (trimmedName.length < 3 || trimmedName.length > 50) {
+        return res.status(400).json({ success: false, message: 'Name must be between 3 and 50 characters' });
+      }
+      if (!/^[a-zA-Z\s]+$/.test(trimmedName)) {
+        return res.status(400).json({ success: false, message: 'Name must only contain English letters' });
+      }
+      user.name = trimmedName;
+    }
+
+    // Validate Email
+    if (email !== undefined) {
+      const trimmedEmail = email.trim().toLowerCase();
+      if (!trimmedEmail) {
+        return res.status(400).json({ success: false, message: 'Email cannot be empty' });
+      }
+      const emailRegex = /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/;
+      if (!emailRegex.test(trimmedEmail)) {
+        return res.status(400).json({ success: false, message: 'Please provide a valid email address' });
+      }
+
+      // Check allowed domains
+      const { ALLOWED_EMAIL_DOMAINS } = require('../utils/validators');
+      const domain = trimmedEmail.split('@')[1];
+      if (!ALLOWED_EMAIL_DOMAINS.includes(domain)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Only Gmail, Hotmail, Yahoo, or SZABIST email addresses are allowed',
+        });
+      }
+
+      // Check if email already exists for another user
+      if (trimmedEmail !== user.email) {
+        const existingUser = await User.findOne({ email: trimmedEmail });
+        if (existingUser) {
+          return res.status(400).json({
+            success: false,
+            message: 'A user with this email already exists',
+          });
+        }
+        user.email = trimmedEmail;
+      }
+    }
+
+    // Validate Password
+    if (password !== undefined && password !== '') {
+      if (password.length < 6) {
+        return res.status(400).json({
+          success: false,
+          message: 'Password must be at least 6 characters',
+        });
+      }
+      if (!/\d/.test(password)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Password must contain at least one number',
+        });
+      }
+      user.password = password;
+    }
+
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Profile updated successfully',
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        avatar: user.avatar,
+        isVerified: user.isVerified,
+        createdAt: user.createdAt,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ────────────────────────────────────────────────────────
 // @desc    Logout (client-side token removal; here for completeness)
 // @route   POST /api/auth/logout
 // @access  Private

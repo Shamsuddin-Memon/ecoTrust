@@ -2,6 +2,8 @@ const { validationResult } = require('express-validator');
 const NGO = require('../models/NGO');
 const User = require('../models/User');
 const Notification = require('../models/Notification');
+const sendEmail = require('../utils/sendEmail');
+const { getNGOApprovalTemplate, getNGODeclineTemplate } = require('../utils/emailTemplates');
 
 // ────────────────────────────────────────────────────────
 // @desc    Register a new NGO (Donor -> Pending NGO)
@@ -113,6 +115,13 @@ exports.approveNGO = async (req, res, next) => {
         message: `Congratulations! Your registration for "${ngo.name}" has been approved. Please re-login to access NGO features.`,
         type: 'success',
       });
+
+      // Send Email
+      const emailOptions = getNGOApprovalTemplate(ngo.name, user.name);
+      await sendEmail({
+        email: user.email,
+        ...emailOptions,
+      });
     }
 
     res.status(200).json({
@@ -154,6 +163,16 @@ exports.declineNGO = async (req, res, next) => {
       type: 'error',
     });
 
+    const user = await User.findById(ngo.createdBy);
+    if (user) {
+      // Send Email
+      const emailOptions = getNGODeclineTemplate(ngo.name, user.name, reason);
+      await sendEmail({
+        email: user.email,
+        ...emailOptions,
+      });
+    }
+
     res.status(200).json({
       success: true,
       message: 'NGO declined successfully',
@@ -175,6 +194,40 @@ exports.getMyNGOStatus = async (req, res, next) => {
     res.status(200).json({
       success: true,
       data: existingNGO,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ────────────────────────────────────────────────────────
+// @desc    Get NGO public profile (trust score, stats)
+// @route   GET /api/ngos/profile/:userId
+// @access  Private (Any authenticated user)
+// ────────────────────────────────────────────────────────
+exports.getNGOPublicProfile = async (req, res, next) => {
+  try {
+    const ngo = await NGO.findOne({ createdBy: req.params.userId });
+    if (!ngo) {
+      return res.status(404).json({ success: false, message: 'NGO profile not found' });
+    }
+
+    const Project = require('../models/Project');
+    const approvedProjectsCount = await Project.countDocuments({
+      ngoId: req.params.userId,
+      status: 'approved',
+    });
+
+    res.status(200).json({
+      success: true,
+      data: {
+        name: ngo.name,
+        mission: ngo.mission,
+        location: ngo.location,
+        trustScore: ngo.trustScore || 0,
+        totalVerifiedTrees: ngo.totalVerifiedTrees || 0,
+        approvedProjectsCount,
+      },
     });
   } catch (error) {
     next(error);

@@ -1,5 +1,12 @@
 const express = require('express');
-const { uploadPlantationData, getPlantationsByProject } = require('../controllers/plantationController');
+const {
+  uploadPlantationData,
+  getPlantationsByProject,
+  getPendingPlantations,
+  getPlantationById,
+  approvePlantation,
+  rejectPlantation,
+} = require('../controllers/plantationController');
 const { protect } = require('../middleware/auth');
 const { authorize } = require('../middleware/roleCheck');
 const plantationUpload = require('../middleware/plantationUploadMiddleware');
@@ -44,5 +51,18 @@ router.post(
 // GET /api/plantations/project/:projectId
 // Fetch all plantation data for a certain project
 router.get('/project/:projectId', protect, getPlantationsByProject);
+
+// ─── Admin Routes ────────────────────────────────────────
+// GET /api/plantations/admin/pending — all pending plantation reviews
+router.get('/admin/pending', protect, authorize('admin'), getPendingPlantations);
+
+// GET /api/plantations/:id — single plantation detail
+router.get('/:id', protect, authorize('admin'), getPlantationById);
+
+// PUT /api/plantations/:id/approve — approve a plantation
+router.put('/:id/approve', protect, authorize('admin'), approvePlantation);
+
+// PUT /api/plantations/:id/reject — reject a plantation
+router.put('/:id/reject', protect, authorize('admin'), rejectPlantation);
 
 module.exports = router;

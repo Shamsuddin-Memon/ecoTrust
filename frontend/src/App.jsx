@@ -12,6 +12,8 @@ import OAuthSuccessPage from './pages/OAuthSuccessPage';
 import NotFoundPage from './pages/NotFoundPage';
 import NGORegistrationPage from './pages/NGORegistrationPage';
 import AdminPanelPage from './pages/AdminPanelPage';
+import ProfilePage from './pages/ProfilePage';
+import NGOProfilePage from './pages/NGOProfilePage';
 
 /**
  * App — Root component.
@@ -51,6 +53,24 @@ function App() {
             element={
               <ProtectedRoute>
                 <DashboardPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/profile"
+            element={
+              <ProtectedRoute>
+                <ProfilePage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/ngo/profile/:userId"
+            element={
+              <ProtectedRoute>
+                <NGOProfilePage />
               </ProtectedRoute>
             }
           />
