@@ -14,6 +14,10 @@ connectDB().then(() => {
   // Initialize fixed admin account after DB mounts
   const initAdmin = require('./utils/initAdmin');
   initAdmin();
+
+  // Start automated monitoring reminders
+  const { initReminderService } = require('./services/reminderService');
+  initReminderService();
 });
 
 // ─── Initialize Express ─────────────────────────────────

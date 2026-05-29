@@ -61,4 +61,32 @@ const sendPasswordResetEmail = async (to, resetUrl) => {
   await transporter.sendMail(mailOptions);
 };
 
-module.exports = { sendPasswordResetEmail };
+const { getMonitoringReminderTemplate, getLowSurvivalAlertTemplate } = require('../utils/emailTemplates');
+
+const sendMonitoringReminderEmail = async (to, ngoName, projectTitle) => {
+  try {
+    const transporter = createTransporter();
+    const mailOptions = getMonitoringReminderTemplate(ngoName, projectTitle, `${process.env.CLIENT_URL || 'http://localhost:5173'}/dashboard`);
+    mailOptions.from = `"EcoTrust" <${process.env.EMAIL_USER}>`;
+    mailOptions.to = to;
+    await transporter.sendMail(mailOptions);
+    console.log(`[Email Service] Sent monitoring reminder to ${to} for project: ${projectTitle}`);
+  } catch (err) {
+    console.error('[Email Service Error] Failed to send monitoring reminder:', err.message);
+  }
+};
+
+const sendLowSurvivalAlertEmail = async (to, ngoName, projectTitle, survivalRate, currentCount, initialCount) => {
+  try {
+    const transporter = createTransporter();
+    const mailOptions = getLowSurvivalAlertTemplate(ngoName, projectTitle, survivalRate, currentCount, initialCount);
+    mailOptions.from = `"EcoTrust" <${process.env.EMAIL_USER}>`;
+    mailOptions.to = to;
+    await transporter.sendMail(mailOptions);
+    console.log(`[Email Service] Sent low survival alert to ${to} for project: ${projectTitle}`);
+  } catch (err) {
+    console.error('[Email Service Error] Failed to send low survival warning:', err.message);
+  }
+};
+
+module.exports = { sendPasswordResetEmail, sendMonitoringReminderEmail, sendLowSurvivalAlertEmail };

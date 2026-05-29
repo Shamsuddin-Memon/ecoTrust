@@ -7,6 +7,7 @@ const {
   declineNGO,
   getMyNGOStatus,
   getNGOPublicProfile,
+  getNGOTrustHistory,
 } = require('../controllers/ngoController');
 const { protect } = require('../middleware/auth');
 const { authorize } = require('../middleware/roleCheck');
@@ -18,6 +19,7 @@ router.get('/me', protect, getMyNGOStatus);
 
 // ─── Public Profile (any authenticated user) ────────────
 router.get('/profile/:userId', protect, getNGOPublicProfile);
+router.get('/profile/:userId/trust-history', protect, getNGOTrustHistory);
 
 // ─── Admin Routes ────────────────────────────────────────
 router.get('/admin/pending', protect, authorize('admin'), getPendingNGOs);

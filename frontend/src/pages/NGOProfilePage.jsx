@@ -3,17 +3,20 @@ import { useParams, useNavigate } from 'react-router-dom';
 import Navbar from '../components/common/Navbar';
 import ngoService from '../services/ngoService';
 import projectService from '../services/projectService';
+import plantationService from '../services/plantationService';
 import useAuth from '../hooks/useAuth';
 import { 
   HiGlobeAlt, 
   HiX, 
   HiLocationMarker, 
   HiShieldCheck, 
-  HiMail, 
-  HiPhone, 
   HiChevronLeft, 
   HiOfficeBuilding,
-  HiClipboardList
+  HiClipboardList,
+  HiChevronRight,
+  HiCheckCircle,
+  HiExclamationCircle,
+  HiCalendar
 } from 'react-icons/hi';
 
 // ─── Trust Score Badge ───────────────────────────────────
@@ -21,18 +24,18 @@ const TrustScoreBadge = ({ score, size = 'sm' }) => {
   if (score === undefined || score === null) return null;
   
   let color, label;
-  if (score >= 80) {
+  if (score >= 90) {
     color = 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20';
-    label = 'Highly Trusted';
-  } else if (score >= 60) {
+    label = 'Expert (Gold)';
+  } else if (score >= 75) {
     color = 'text-amber-400 bg-amber-500/10 border-amber-500/20';
-    label = 'Trusted';
-  } else if (score >= 40) {
+    label = 'Trusted (Silver)';
+  } else if (score >= 50) {
     color = 'text-orange-400 bg-orange-500/10 border-orange-500/20';
-    label = 'Building Trust';
+    label = 'Standard (Bronze)';
   } else {
-    color = 'text-dark-400 bg-dark-700/50 border-dark-600/30';
-    label = 'New NGO';
+    color = 'text-red-400 bg-red-500/10 border-red-500/20';
+    label = 'Unverified / High Risk';
   }
 
   if (size === 'lg') {
@@ -66,6 +69,11 @@ const NGOProfilePage = () => {
   const [selectedProject, setSelectedProject] = useState(null);
   const [fullscreenImage, setFullscreenImage] = useState(null);
 
+  // Survival Tracking states
+  const [showSurvivalModal, setShowSurvivalModal] = useState(false);
+  const [monitoringReports, setMonitoringReports] = useState([]);
+  const [loadingMonitoring, setLoadingMonitoring] = useState(false);
+
   useEffect(() => {
     const fetchNGOData = async () => {
       setLoading(true);
@@ -88,6 +96,35 @@ const NGOProfilePage = () => {
       fetchNGOData();
     }
   }, [userId, token]);
+
+  // Load Monitoring Reports for Survival Modal
+  useEffect(() => {
+    if (showSurvivalModal && projects.length > 0 && token) {
+      const fetchAllMonitoring = async () => {
+        setLoadingMonitoring(true);
+        try {
+          const reportsList = [];
+          for (const proj of projects) {
+            const res = await plantationService.getMonitoringReportsByProject(proj._id, token);
+            if (res.data && res.data.length > 0) {
+              reportsList.push({
+                projectId: proj._id,
+                projectTitle: proj.title,
+                category: proj.category,
+                reports: res.data
+              });
+            }
+          }
+          setMonitoringReports(reportsList);
+        } catch (err) {
+          console.error("Failed to load monitoring reports for profile", err);
+        } finally {
+          setLoadingMonitoring(false);
+        }
+      };
+      fetchAllMonitoring();
+    }
+  }, [showSurvivalModal, projects, token]);
 
   if (loading) {
     return (
@@ -125,9 +162,9 @@ const NGOProfilePage = () => {
         >
           <HiChevronLeft size={20} /> Back
         </button>
-
+ 
         {/* NGO Profile Header / Hero card */}
-        <div className="relative rounded-3xl border border-dark-800 bg-dark-900/60 p-8 sm:p-10 shadow-xl overflow-hidden mb-12">
+        <div className="relative rounded-3xl border border-dark-800 bg-dark-900/60 p-8 sm:p-10 shadow-xl overflow-hidden mb-12 animate-slide-up">
           {/* Ambient background glow */}
           <div className="absolute top-0 right-0 w-80 h-80 bg-eco-500/10 rounded-full blur-3xl pointer-events-none"></div>
 
@@ -146,16 +183,27 @@ const NGOProfilePage = () => {
                     <HiLocationMarker className="text-eco-500" /> {ngoInfo.location}
                   </span>
                 )}
-                {ngoInfo.contact && (
-                  <span className="flex items-center gap-1.5">
-                    <HiPhone className="text-eco-500" /> {ngoInfo.contact}
-                  </span>
-                )}
+              </div>
+
+              {/* Highly visible Navigation Buttons */}
+              <div className="flex flex-wrap items-center gap-3 mt-4">
+                <button
+                  onClick={() => setShowSurvivalModal(true)}
+                  className="bg-gradient-to-r from-emerald-500 to-eco-600 hover:from-emerald-600 hover:to-eco-700 text-white font-bold text-xs py-2.5 px-5 rounded-xl shadow-lg transition-all hover:scale-105 flex items-center gap-2 border border-emerald-400/20"
+                >
+                  🌳 Real-time Survival Tracking
+                </button>
+                <button
+                  onClick={() => navigate(`/ngo/${userId}/trust-history`)}
+                  className="bg-dark-950/90 hover:bg-dark-800 text-eco-400 hover:text-white font-bold text-xs py-2.5 px-5 rounded-xl border border-dark-800 transition-all hover:scale-105 flex items-center gap-2 shadow-md"
+                >
+                  📈 View Trust History & Trend
+                </button>
               </div>
             </div>
 
             {/* Stats Block */}
-            <div className="grid grid-cols-3 gap-6 sm:gap-10 border-t md:border-t-0 md:border-l border-dark-800 pt-6 md:pt-0 md:pl-10 w-full md:w-auto shrink-0">
+            <div className="grid grid-cols-3 gap-6 sm:gap-10 border-t md:border-t-0 md:border-l border-dark-800 pt-6 md:pt-0 md:pl-10 w-full md:w-auto shrink-0 text-center md:text-left">
               <div>
                 <p className="text-dark-400 text-xs font-bold uppercase tracking-wider mb-1">Trust Score</p>
                 <p className="text-3xl font-black text-eco-400">{ngoInfo.trustScore}%</p>
@@ -365,6 +413,277 @@ const NGOProfilePage = () => {
               </div>
             </div>
 
+          </div>
+        </div>
+      )}
+
+      {/* Survival Tracking Modal */}
+      {showSurvivalModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-dark-950/80 backdrop-blur-sm animate-fade-in" onClick={() => setShowSurvivalModal(false)}></div>
+          
+          <div className="relative bg-dark-900 border border-dark-700 w-full max-w-4xl rounded-3xl overflow-hidden shadow-2xl animate-slide-up flex flex-col max-h-[90vh]">
+            <button 
+              onClick={() => setShowSurvivalModal(false)}
+              className="absolute top-4 right-4 bg-dark-950/50 hover:bg-red-500 hover:text-white text-dark-300 p-2 rounded-full backdrop-blur-md z-30 transition-colors"
+            >
+              <HiX size={20} />
+            </button>
+
+            <div className="p-6 border-b border-dark-800 shrink-0">
+              <h2 className="text-2xl font-bold text-white flex items-center gap-2">
+                🌳 Real-time AI Survival Tracking
+              </h2>
+              <p className="text-xs text-dark-400 mt-1">Periodic drone & satellite analysis of tree counts compared with plantation baseline data</p>
+            </div>
+
+            <div className="p-6 overflow-y-auto space-y-8 custom-scroll">
+              {loadingMonitoring ? (
+                <div className="h-48 flex items-center justify-center">
+                  <div className="w-8 h-8 border-4 border-eco-500 border-t-transparent rounded-full animate-spin"></div>
+                </div>
+              ) : monitoringReports.length === 0 ? (
+                <div className="p-12 text-center flex flex-col items-center">
+                  <HiOfficeBuilding size={50} className="text-dark-500 mb-4" />
+                  <h3 className="text-lg font-bold text-white mb-1">No Survival History</h3>
+                  <p className="text-dark-400 text-sm">This NGO has not submitted any periodic monitoring updates yet.</p>
+                </div>
+              ) : (
+                <>
+                  {/* Premium Survival Rate Trend Line Chart */}
+                  <div className="bg-dark-950/40 border border-dark-850 p-5 rounded-3xl space-y-4">
+                    <div>
+                      <h4 className="text-sm font-bold text-white">📈 Global Survival Trend Analytics</h4>
+                      <p className="text-[10px] text-dark-400">Aggregated real-time survival rates across all approved projects</p>
+                    </div>
+                    
+                    {(() => {
+                      const allReportsSorted = monitoringReports
+                        .flatMap(pr => pr.reports.map(r => ({ ...r, projectTitle: pr.projectTitle })))
+                        .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+
+                      if (allReportsSorted.length === 0) return null;
+
+                      return (
+                        <div className="w-full">
+                          <svg className="w-full h-44 bg-dark-950/60 rounded-2xl border border-dark-800 p-4 overflow-visible" viewBox="0 0 600 150" preserveAspectRatio="none">
+                            <defs>
+                              <linearGradient id="chartGlow" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stopColor="#10b981" stopOpacity="0.25" />
+                                <stop offset="100%" stopColor="#10b981" stopOpacity="0" />
+                              </linearGradient>
+                            </defs>
+                            
+                            {/* Grid Lines */}
+                            <line x1="40" y1="20" x2="560" y2="20" stroke="#1e293b" strokeWidth="1" strokeDasharray="4" />
+                            <line x1="40" y1="75" x2="560" y2="75" stroke="#1e293b" strokeWidth="1" strokeDasharray="4" />
+                            <line x1="40" y1="130" x2="560" y2="130" stroke="#1e293b" strokeWidth="1" />
+                            
+                            {/* 70% Threshold Line */}
+                            <line x1="40" y1="51" x2="560" y2="51" stroke="#ef4444" strokeWidth="1.5" strokeDasharray="6" />
+                            <text x="45" y="46" fill="#ef4444" className="text-[9px] font-black uppercase tracking-wider">70% Critical Threshold</text>
+                            
+                            {/* Area Fill */}
+                            {allReportsSorted.length > 1 && (
+                              <path
+                                d={`M 40,130 L ${allReportsSorted.map((r, i) => `${40 + (i / (allReportsSorted.length - 1)) * 520},${20 + (100 - r.survivalRate) * 1.1}`).join(" L ")} L 560,130 Z`}
+                                fill="url(#chartGlow)"
+                              />
+                            )}
+                            
+                            {/* Line path */}
+                            {allReportsSorted.length > 1 ? (
+                              <path
+                                d={`M ${allReportsSorted.map((r, i) => `${40 + (i / (allReportsSorted.length - 1)) * 520},${20 + (100 - r.survivalRate) * 1.1}`).join(" L ")}`}
+                                fill="none"
+                                stroke="#10b981"
+                                strokeWidth="3"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              />
+                            ) : null}
+                            
+                            {/* Data Dots & Hover Labels */}
+                            {allReportsSorted.map((r, i) => {
+                              const cx = allReportsSorted.length > 1 
+                                ? 40 + (i / (allReportsSorted.length - 1)) * 520
+                                : 300;
+                              const cy = 20 + (100 - r.survivalRate) * 1.1;
+                              
+                              return (
+                                <g key={r._id} className="group/dot cursor-pointer">
+                                  <circle
+                                    cx={cx}
+                                    cy={cy}
+                                    r="6"
+                                    fill={r.survivalRate >= 70 ? "#10b981" : "#ef4444"}
+                                    className="transition-all duration-300 group-hover/dot:r-8 hover:scale-125"
+                                  />
+                                  <circle
+                                    cx={cx}
+                                    cy={cy}
+                                    r="12"
+                                    fill="transparent"
+                                    className="group-hover/dot:fill-white/10"
+                                  />
+                                  <g className="opacity-0 group-hover/dot:opacity-100 transition-opacity duration-200 pointer-events-none">
+                                    <rect
+                                      x={cx - 75}
+                                      y={cy - 45}
+                                      width="150"
+                                      height="35"
+                                      rx="6"
+                                      fill="#0f172a"
+                                      stroke="#1e293b"
+                                      strokeWidth="1"
+                                    />
+                                    <text x={cx} y={cy - 33} fill="#ffffff" textAnchor="middle" className="text-[9px] font-bold">{r.projectTitle}</text>
+                                    <text x={cx} y={cy - 22} fill={r.survivalRate >= 70 ? "#34d399" : "#f87171"} textAnchor="middle" className="text-[10px] font-black">{r.survivalRate}% Survival</text>
+                                  </g>
+                                </g>
+                              );
+                            })}
+                            
+                            {/* Y Axis Labels */}
+                            <text x="15" y="24" fill="#64748b" className="text-[9px] font-bold">100%</text>
+                            <text x="15" y="79" fill="#64748b" className="text-[9px] font-bold">50%</text>
+                            <text x="20" y="134" fill="#64748b" className="text-[9px] font-bold">0%</text>
+                          </svg>
+                        </div>
+                      );
+                    })()}
+                  </div>
+
+                  {/* Real-time Project Logs and side-by-side Then & Now comparisons */}
+                  <div className="space-y-10">
+                    {monitoringReports.map((projReport) => (
+                      <div key={projReport.projectId} className="space-y-4">
+                        <div className="flex items-center justify-between border-b border-dark-800 pb-2">
+                          <h3 className="font-black text-white text-lg flex items-center gap-2">
+                            🌱 {projReport.projectTitle}
+                          </h3>
+                          <span className="text-[10px] bg-dark-950 text-eco-400 border border-dark-800 font-bold px-3 py-1 rounded-md uppercase tracking-wider">
+                            {projReport.category}
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-1 gap-6">
+                          {projReport.reports.map((report) => {
+                            const date = new Date(report.createdAt).toLocaleDateString('en-US', {
+                              month: 'short',
+                              day: 'numeric',
+                              year: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            });
+
+                            // Fetch related project initial approved photo
+                            const relatedProject = projects.find(p => p._id === projReport.projectId);
+                            const initialImgUrl = relatedProject?.fieldData?.imageUrls?.[0] || relatedProject?.fieldData?.imageUrl;
+
+                            return (
+                              <div key={report._id} className="bg-dark-950/60 border border-dark-800/80 rounded-2xl overflow-hidden flex flex-col p-6 space-y-5 shadow-lg">
+                                {/* Header Info */}
+                                <div className="flex justify-between items-center text-xs border-b border-dark-800/50 pb-3">
+                                  <span className="text-dark-400 flex items-center gap-1.5 font-bold">
+                                    <HiCalendar /> {date}
+                                  </span>
+                                  <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase border ${
+                                    report.status === 'normal'
+                                      ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20'
+                                      : report.status === 'warning'
+                                        ? 'text-amber-400 bg-amber-500/10 border-amber-500/20'
+                                        : 'text-red-400 bg-red-500/10 border-red-500/20'
+                                  }`}>
+                                    Status: {report.status}
+                                  </span>
+                                </div>
+
+                                {/* Then & Now Comparison Columns */}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                  {/* Initial Photo (Then) */}
+                                  <div className="space-y-2">
+                                    <h4 className="text-[10px] text-dark-400 uppercase font-black tracking-wider flex items-center gap-1">
+                                      <span>📸</span> Initial Plantation Photo
+                                    </h4>
+                                    <div 
+                                      className="h-44 bg-dark-800 rounded-2xl overflow-hidden relative border border-dark-700/50 group/img cursor-pointer" 
+                                      onClick={() => setFullscreenImage(initialImgUrl ? `http://localhost:5000/${initialImgUrl.replace(/\\/g, '/').replace(/^\//, '')}` : '')}
+                                    >
+                                      {initialImgUrl ? (
+                                        <img 
+                                          src={`http://localhost:5000/${initialImgUrl.replace(/\\/g, '/').replace(/^\//, '')}`} 
+                                          className="w-full h-full object-cover transition-transform duration-500 group-hover/img:scale-105" 
+                                          alt="Initial plantation approved" 
+                                        />
+                                      ) : (
+                                        <div className="w-full h-full flex items-center justify-center text-dark-500 text-xs">No Initial Photo</div>
+                                      )}
+                                      <div className="absolute top-3 left-3 bg-dark-950/80 text-[10px] font-bold text-white px-2.5 py-0.5 rounded-md border border-dark-800/80 backdrop-blur-sm">
+                                        Baseline Count: {report.initialTreeCount}
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  {/* Latest Photo (Now) */}
+                                  <div className="space-y-2">
+                                    <h4 className="text-[10px] text-dark-400 uppercase font-black tracking-wider flex items-center gap-1">
+                                      <span>🤖</span> Latest AI-Monitored Photo
+                                    </h4>
+                                    <div 
+                                      className="h-44 bg-dark-800 rounded-2xl overflow-hidden relative border border-dark-700/50 group/img cursor-pointer" 
+                                      onClick={() => setFullscreenImage(`http://localhost:5000${report.imageUrl}`)}
+                                    >
+                                      <img 
+                                        src={`http://localhost:5000${report.imageUrl}`} 
+                                        className="w-full h-full object-cover transition-transform duration-500 group-hover/img:scale-105" 
+                                        alt="Latest monitoring verified" 
+                                      />
+                                      <div className="absolute top-3 left-3 bg-dark-950/80 text-[10px] font-bold text-eco-400 px-2.5 py-0.5 rounded-md border border-dark-800/80 backdrop-blur-sm">
+                                        AI Count: {report.aiTreeCount}
+                                      </div>
+                                      <div className="absolute bottom-3 right-3">
+                                        <span className={`px-2.5 py-1.5 rounded-xl text-xs font-black border uppercase shadow-xl ${
+                                          report.survivalRate >= 70
+                                            ? 'text-emerald-400 bg-emerald-500/90 border-emerald-500'
+                                            : 'text-red-400 bg-red-500/90 border-red-500'
+                                        }`}>
+                                          Survival: {report.survivalRate}%
+                                        </span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                {/* Analytics Panel */}
+                                <div className="bg-dark-900/60 border border-dark-800 p-4 rounded-xl flex items-center justify-between text-xs">
+                                  <div>
+                                    <span className="text-dark-500 text-[10px] font-bold uppercase mb-0.5 block">Net Surviving / Initial</span>
+                                    <span className={`font-black text-sm ${report.aiTreeCount >= report.initialTreeCount ? 'text-emerald-400' : 'text-amber-400'}`}>
+                                      {report.aiTreeCount} of {report.initialTreeCount} trees
+                                    </span>
+                                  </div>
+                                  <div className="text-right">
+                                    <span className="text-dark-500 text-[10px] font-bold uppercase mb-0.5 block">Real-time Telemetry</span>
+                                    <span className={`font-extrabold text-xs uppercase ${report.survivalRate >= 70 ? 'text-emerald-400' : 'text-red-400'}`}>
+                                      {report.survivalRate >= 70 ? '🟢 Stable Plantation' : '⚠️ Low Survival Alert'}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+
+            <div className="p-6 border-t border-dark-800 shrink-0 flex justify-end">
+              <button onClick={() => setShowSurvivalModal(false)} className="btn-eco px-6">Close</button>
+            </div>
           </div>
         </div>
       )}

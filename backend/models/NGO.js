@@ -38,9 +38,21 @@ const ngoSchema = new mongoose.Schema(
     },
     trustScore: {
       type: Number,
-      default: 0,
+      default: 70, // Start as Standard (Bronze)
       min: 0,
       max: 100,
+    },
+    trustTier: {
+      type: String,
+      default: 'Standard (Bronze)',
+    },
+    criticalDiscrepancies: {
+      type: Number,
+      default: 0,
+    },
+    rejectionCount: {
+      type: Number,
+      default: 0,
     },
     totalVerifiedTrees: {
       type: Number,

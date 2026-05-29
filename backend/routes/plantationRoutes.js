@@ -6,6 +6,10 @@ const {
   getPlantationById,
   approvePlantation,
   rejectPlantation,
+  uploadMonitoringData,
+  getMonitoringReportsByProject,
+  simulatePlantationTime,
+  getMyMonitoringStatus,
 } = require('../controllers/plantationController');
 const { protect } = require('../middleware/auth');
 const { authorize } = require('../middleware/roleCheck');
@@ -48,6 +52,9 @@ router.post(
   uploadPlantationData
 );
 
+// GET /api/plantations/my-monitoring-status — NGO only: get all project monitoring statuses
+router.get('/my-monitoring-status', protect, authorize('ngo'), getMyMonitoringStatus);
+
 // GET /api/plantations/project/:projectId
 // Fetch all plantation data for a certain project
 router.get('/project/:projectId', protect, getPlantationsByProject);
@@ -64,5 +71,21 @@ router.put('/:id/approve', protect, authorize('admin'), approvePlantation);
 
 // PUT /api/plantations/:id/reject — reject a plantation
 router.put('/:id/reject', protect, authorize('admin'), rejectPlantation);
+
+// POST /api/plantations/:id/monitoring — upload monitoring image
+router.post(
+  '/:id/monitoring',
+  protect,
+  authorize('ngo'),
+  setUploadFolder, // resolves path
+  plantationUpload.single('image'), // monitoring uses single image
+  uploadMonitoringData
+);
+
+// GET /api/plantations/project/:projectId/monitoring — get monitoring reports
+router.get('/project/:projectId/monitoring', protect, getMonitoringReportsByProject);
+
+// PUT /api/plantations/:id/simulate-time — simulate 12 hours passing
+router.put('/:id/simulate-time', protect, simulatePlantationTime);
 
 module.exports = router;

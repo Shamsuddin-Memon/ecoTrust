@@ -58,11 +58,8 @@ exports.uploadPlantationData = async (req, res, next) => {
 
     const userTreeCount = parseInt(treeCount, 10);
 
-    // ─── AI VERIFICATION (TEMPORARILY BYPASSED FOR TESTING) ──────
-    // Commented out to allow testing uploads without strict validation.
-    // Re-enable when the real model is integrated.
-    /*
-    // Case 1: AI detects 0 trees → reject
+    // ─── AI VERIFICATION (REAL MODEL INTEGRATED) ──────────────────
+    // Case 1: AI detects 0 trees → reject immediately
     if (aiResult.treeCount === 0) {
       return res.status(400).json({
         success: false,
@@ -71,20 +68,7 @@ exports.uploadPlantationData = async (req, res, next) => {
       });
     }
 
-    // Case 2: Mismatch > 10% → reject with details
-    const difference = Math.abs(aiResult.treeCount - userTreeCount) / userTreeCount;
-    if (difference > 0.10) {
-      return res.status(400).json({
-        success: false,
-        message: `Tree count mismatch: You reported ${userTreeCount} trees but AI detected ${aiResult.treeCount} trees. Please verify your count or re-upload a clearer image.`,
-        aiTreeCount: aiResult.treeCount,
-        userTreeCount: userTreeCount,
-        mismatch: true,
-      });
-    }
-    */
-
-    // Case 3: Match (within 10%) → proceed with AI verification
+    // Case 2: Save submission for admin review (even if counts differ, trust score handles it on review)
     const plantation = await Plantation.create({
       projectId,
       ngoId: req.user.id,
@@ -235,7 +219,11 @@ exports.approvePlantation = async (req, res, next) => {
     // Recalculate trust score
     try {
       const { recalculateTrustScore } = require('../services/trustScoreService');
-      await recalculateTrustScore(plantation.ngoId);
+      await recalculateTrustScore(plantation.ngoId, {
+        projectId: plantation.projectId,
+        plantationId: plantation._id,
+        reason: `Plantation approved (Reported: ${plantation.treeCount}, AI: ${plantation.aiTreeCount || 0})`,
+      });
     } catch (err) {
       console.error('Trust score recalculation failed:', err.message);
     }
@@ -277,10 +265,229 @@ exports.rejectPlantation = async (req, res, next) => {
       type: 'error',
     });
 
+    // Recalculate trust score
+    try {
+      const { recalculateTrustScore } = require('../services/trustScoreService');
+      await recalculateTrustScore(plantation.ngoId, {
+        projectId: plantation.projectId,
+        plantationId: plantation._id,
+        reason: `Plantation rejected (Reported: ${plantation.treeCount}, AI: ${plantation.aiTreeCount || 0}). Reason: ${reason || 'Invalid data'}`,
+      });
+    } catch (err) {
+      console.error('Trust score recalculation failed:', err.message);
+    }
+
     res.status(200).json({
       success: true,
       message: 'Plantation rejected',
       data: plantation,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ─── MONITORING: Upload Monitoring Data (supports AI Verification) ─────────────────
+// @desc    Upload monitoring image to assess tree survival rate
+// @route   POST /api/plantations/:id/monitoring
+// @access  Private (NGO)
+exports.uploadMonitoringData = async (req, res, next) => {
+  try {
+    const Monitoring = require('../models/Monitoring');
+    const { analyzeImage } = require('../models/treeCounter');
+    const NGO = require('../models/NGO');
+    const Project = require('../models/Project');
+    const { sendLowSurvivalAlertEmail } = require('../services/emailService');
+
+    const plantationId = req.params.id;
+
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'Please upload a monitoring image' });
+    }
+
+    const plantation = await Plantation.findById(plantationId);
+    if (!plantation) {
+      return res.status(404).json({ success: false, message: 'Plantation not found' });
+    }
+
+    // Verify ownership
+    if (plantation.ngoId.toString() !== req.user.id) {
+      return res.status(403).json({ success: false, message: 'Not authorized to add monitoring data' });
+    }
+
+    // Convert file path to relative URL
+    const relativePath = req.file.path.replace(/\\/g, '/').split('uploads/')[1];
+    const imageUrl = `/uploads/${relativePath}`;
+
+    // Run AI analysis
+    const aiResult = await analyzeImage(req.file.path);
+
+    const initialTreeCount = (plantation.aiTreeCount !== null && plantation.aiTreeCount !== undefined) 
+      ? plantation.aiTreeCount 
+      : plantation.treeCount;
+    const currentTreeCount = aiResult.treeCount;
+
+    // Calculate survival rate
+    const survivalRate = initialTreeCount > 0 
+      ? Math.round((currentTreeCount / initialTreeCount) * 10000) / 100
+      : 0;
+
+    let status = 'normal';
+    if (survivalRate < 50) {
+      status = 'critical';
+    } else if (survivalRate < 70) {
+      status = 'warning';
+    }
+
+    // Create monitoring report
+    const monitoring = await Monitoring.create({
+      projectId: plantation.projectId,
+      plantationId: plantation._id,
+      ngoId: req.user.id,
+      imageUrl,
+      aiTreeCount: currentTreeCount,
+      initialTreeCount,
+      survivalRate,
+      status
+    });
+
+    // Recalculate trust score (low survival rates will now deduct 15 points)
+    const { recalculateTrustScore } = require('../services/trustScoreService');
+    await recalculateTrustScore(req.user.id, {
+      projectId: plantation.projectId,
+      plantationId: plantation._id,
+      reason: `Monitoring uploaded: Tree Survival Rate is ${survivalRate}% (AI Count: ${currentTreeCount}, Initial AI Baseline: ${initialTreeCount})`
+    });
+
+    // Send Alert Email if survival rate < 70%
+    if (survivalRate < 70) {
+      const ngoProfile = await NGO.findOne({ createdBy: req.user.id });
+      const ngoName = ngoProfile ? ngoProfile.name : 'NGO Partner';
+      const project = await Project.findById(plantation.projectId);
+      const projectTitle = project ? project.title : 'Plantation Project';
+
+      await sendLowSurvivalAlertEmail(
+        req.user.email,
+        ngoName,
+        projectTitle,
+        survivalRate,
+        currentTreeCount,
+        initialTreeCount
+      );
+    }
+
+    res.status(201).json({
+      success: true,
+      message: `Monitoring image uploaded successfully. Survival rate: ${survivalRate}%`,
+      data: monitoring
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ─── MONITORING: Get Monitoring Reports by Project ─────────────────
+// @desc    Get all monitoring reports for a project
+// @route   GET /api/plantations/project/:projectId/monitoring
+// @access  Private
+exports.getMonitoringReportsByProject = async (req, res, next) => {
+  try {
+    const Monitoring = require('../models/Monitoring');
+    const { projectId } = req.params;
+    const reports = await Monitoring.find({ projectId }).sort({ createdAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      count: reports.length,
+      data: reports
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ─── MONITORING: Simulate 12 Hours Elapse (Now 10 Minutes) ─────────
+// @desc    Backdate plantation createdAt by 11 minutes for testing purposes
+// @route   PUT /api/plantations/:id/simulate-time
+// @access  Private (NGO)
+exports.simulatePlantationTime = async (req, res, next) => {
+  try {
+    const plantationId = req.params.id;
+    const plantation = await Plantation.findById(plantationId);
+    if (!plantation) {
+      return res.status(404).json({ success: false, message: 'Plantation not found' });
+    }
+
+    // Shift createdAt back by 11 minutes (exceeds 10m threshold)
+    plantation.createdAt = new Date(Date.now() - (11 * 60 * 1000));
+    plantation.reminderSent = false; // Reset reminder status so it can be sent again
+    await plantation.save();
+
+    // Also delete any existing monitoring reports for this plantation so they can re-verify and test
+    const Monitoring = require('../models/Monitoring');
+    await Monitoring.deleteMany({ plantationId: plantation._id });
+
+    // Recalculate trust score to revert any low survival penalties during simulation reset
+    try {
+      const { recalculateTrustScore } = require('../services/trustScoreService');
+      await recalculateTrustScore(plantation.ngoId, {
+        projectId: plantation.projectId,
+        plantationId: plantation._id,
+        reason: `Simulation reset: Plantation monitoring cleared and time backdated`
+      });
+    } catch (err) {
+      console.error('Trust score recalculation during simulation reset failed:', err.message);
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Simulation successful. Plantation createdAt shifted back by 11 minutes and monitoring reports cleared.',
+      data: plantation
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ─── MONITORING: Get NGO Monitoring Statuses ─────────────────────
+// @desc    Get all plantations for the logged-in NGO along with their monitoring statuses
+// @route   GET /api/plantations/my-monitoring-status
+// @access  Private (NGO)
+exports.getMyMonitoringStatus = async (req, res, next) => {
+  try {
+    const Monitoring = require('../models/Monitoring');
+    const Project = require('../models/Project');
+
+    // Find all approved plantations for this NGO
+    const plantations = await Plantation.find({
+      ngoId: req.user.id,
+      verificationStatus: 'approved'
+    }).populate('projectId', 'title category');
+
+    const result = [];
+    for (const p of plantations) {
+      const monitoringReport = await Monitoring.findOne({ plantationId: p._id });
+      
+      const minutesElapsed = (Date.now() - new Date(p.createdAt).getTime()) / (1000 * 60);
+      const needsMonitoring = minutesElapsed >= 10 && !monitoringReport;
+
+      result.push({
+        _id: p._id,
+        projectId: p.projectId?._id,
+        projectTitle: p.projectId?.title || 'Unknown Project',
+        gpsLocation: p.gpsLocation,
+        treeCount: (p.aiTreeCount !== null && p.aiTreeCount !== undefined) ? p.aiTreeCount : p.treeCount,
+        createdAt: p.createdAt,
+        minutesElapsed: Math.round(minutesElapsed * 10) / 10,
+        needsMonitoring,
+        monitored: !!monitoringReport,
+        monitoringReport: monitoringReport || null
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: result
     });
   } catch (error) {
     next(error);

@@ -237,3 +237,47 @@ exports.getProjectDeclineTemplate = (projectTitle, ngoName, userName, reason) =>
     html: baseTemplate(title, body),
   };
 };
+
+exports.getMonitoringReminderTemplate = (ngoName, projectTitle, linkUrl) => {
+  const title = `Please Update Your Project Image - ecoTrust`;
+  const body = `
+    <h1>Please Update Your Project Image 🌳</h1>
+    <p>Hi team at <strong>${ngoName}</strong>,</p>
+    <p>This is an automated reminder that your plantation for <strong>"${projectTitle}"</strong> requires a periodic image update.</p>
+    <p>To verify the tree survival rates and maintain your trust score, please update your project image as soon as possible.</p>
+    <p>Please navigate to your dashboard to upload the monitoring image.</p>
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="${linkUrl || 'http://localhost:5173/dashboard'}" class="btn">Please Update Your Project Image</a>
+    </div>
+  `;
+  return {
+    subject: `Please update your project image for "${projectTitle}"`,
+    text: `Please update your project image for "${projectTitle}" on the EcoTrust dashboard.`,
+    html: baseTemplate(title, body),
+  };
+};
+
+exports.getLowSurvivalAlertTemplate = (ngoName, projectTitle, survivalRate, currentCount, initialCount) => {
+  const title = `Low Tree Survival Alert - ecoTrust`;
+  const body = `
+    <h1>⚠️ Low Tree Survival Rate Detected</h1>
+    <p>Hi team at <strong>${ngoName}</strong>,</p>
+    <div class="status-badge status-declined">Critical Warning</div>
+    <p>Our AI verification engine has completed inference on your latest monitoring submission for project <strong>"${projectTitle}"</strong>.</p>
+    <p>A low tree survival rate of <strong style="color: #ef4444;">${survivalRate}%</strong> has been detected.</p>
+    <div class="reason-box">
+      <div class="reason-title">Inference details:</div>
+      <p class="reason-text">Initial Tree Count: <strong>${initialCount}</strong></p>
+      <p class="reason-text">Current Trees Detected: <strong>${currentCount}</strong></p>
+    </div>
+    <p>According to our platform policies, low survival rates (&lt; 70%) trigger automatic alerts and affect your NGO Trust Score. A score deduction of <strong>-15 points</strong> has been applied to your trust profile.</p>
+    <p>Please check your dashboard to review the analysis and upload a clearer image if this was a detection error, or take soil and plant care measures to preserve your plantation.</p>
+    <a href="${process.env.CLIENT_URL || 'http://localhost:5173'}/dashboard" class="btn">View My Dashboard</a>
+  `;
+  return {
+    subject: `ecoTrust Critical Alert: Low Survival Rate on "${projectTitle}" (${survivalRate}%)`,
+    text: `Alert: A low survival rate of ${survivalRate}% was detected on your plantation for "${projectTitle}". A trust score penalty has been applied.`,
+    html: baseTemplate(title, body),
+  };
+};
+

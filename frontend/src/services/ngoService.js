@@ -33,6 +33,11 @@ const ngoService = {
    * Get NGO public profile (trust score, stats)
    */
   getNGOProfile: (userId) => api.get(`/ngos/profile/${userId}`),
+
+  /**
+   * Get NGO trust score history & trends
+   */
+  getNGOTrustHistory: (userId) => api.get(`/ngos/profile/${userId}/trust-history`),
 };
 
 export default ngoService;

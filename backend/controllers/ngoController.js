@@ -233,3 +233,39 @@ exports.getNGOPublicProfile = async (req, res, next) => {
     next(error);
   }
 };
+
+// ────────────────────────────────────────────────────────
+// @desc    Get NGO trust score history & trends
+// @route   GET /api/ngos/profile/:userId/trust-history
+// @access  Private (Any authenticated user)
+// ────────────────────────────────────────────────────────
+exports.getNGOTrustHistory = async (req, res, next) => {
+  try {
+    const TrustHistory = require('../models/TrustHistory');
+    
+    // Check if NGO exists
+    const ngo = await NGO.findOne({ createdBy: req.params.userId });
+    if (!ngo) {
+      return res.status(404).json({ success: false, message: 'NGO profile not found' });
+    }
+
+    const history = await TrustHistory.find({ ngoUserId: req.params.userId })
+      .populate('projectId', 'title category targetFunding')
+      .populate('plantationId', 'treeCount aiTreeCount verificationStatus')
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      count: history.length,
+      data: {
+        ngoName: ngo.name,
+        trustScore: ngo.trustScore,
+        trustTier: ngo.trustTier,
+        history,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+

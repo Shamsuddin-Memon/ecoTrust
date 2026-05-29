@@ -71,6 +71,10 @@ const plantationSchema = new mongoose.Schema(
       type: Number,
       default: null,
     },
+    reminderSent: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: true, // Automatically manages createdAt and updatedAt

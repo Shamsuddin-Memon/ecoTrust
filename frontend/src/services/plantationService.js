@@ -50,6 +50,35 @@ const rejectPlantation = async (id, reason, token) => {
   return response.data;
 };
 
+const uploadMonitoringData = async (id, formData, token) => {
+  const config = {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'multipart/form-data',
+    },
+  };
+  const response = await axios.post(`${API_URL}/${id}/monitoring`, formData, config);
+  return response.data;
+};
+
+const getMonitoringReportsByProject = async (projectId, token) => {
+  const config = { headers: { Authorization: `Bearer ${token}` } };
+  const response = await axios.get(`${API_URL}/project/${projectId}/monitoring`, config);
+  return response.data;
+};
+
+const simulatePlantationTime = async (id, token) => {
+  const config = { headers: { Authorization: `Bearer ${token}` } };
+  const response = await axios.put(`${API_URL}/${id}/simulate-time`, {}, config);
+  return response.data;
+};
+
+const getMyMonitoringStatus = async (token) => {
+  const config = { headers: { Authorization: `Bearer ${token}` } };
+  const response = await axios.get(`${API_URL}/my-monitoring-status`, config);
+  return response.data;
+};
+
 const plantationService = {
   uploadPlantationData,
   getPlantationsByProject,
@@ -57,6 +86,10 @@ const plantationService = {
   getPlantationById,
   approvePlantation,
   rejectPlantation,
+  uploadMonitoringData,
+  getMonitoringReportsByProject,
+  simulatePlantationTime,
+  getMyMonitoringStatus,
 };
 
 export default plantationService;

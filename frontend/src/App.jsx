@@ -14,6 +14,7 @@ import NGORegistrationPage from './pages/NGORegistrationPage';
 import AdminPanelPage from './pages/AdminPanelPage';
 import ProfilePage from './pages/ProfilePage';
 import NGOProfilePage from './pages/NGOProfilePage';
+import NGOTrustHistoryPage from './pages/NGOTrustHistoryPage';
 
 /**
  * App — Root component.
@@ -71,6 +72,15 @@ function App() {
             element={
               <ProtectedRoute>
                 <NGOProfilePage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/ngo/:userId/trust-history"
+            element={
+              <ProtectedRoute>
+                <NGOTrustHistoryPage />
               </ProtectedRoute>
             }
           />
