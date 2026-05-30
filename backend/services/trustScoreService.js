@@ -85,9 +85,18 @@ const calculateTrustScore = async (ngoUserId) => {
   const lowSurvivalAlerts = monitorings.filter((m) => m.survivalRate < 70).length;
   const survivalPenalty = lowSurvivalAlerts * 15;
 
+  // D. Over-reporting penalty (-15 points per event where user treeCount > AI detected treeCount)
+  let overReportedCount = 0;
+  allPlantations.forEach((p) => {
+    if (p.treeCount && p.aiTreeCount && p.treeCount > p.aiTreeCount) {
+      overReportedCount++;
+    }
+  });
+  const overReportingPenalty = overReportedCount * 15;
+
   // Final Score (0-100)
   const finalScore = Math.round(
-    Math.min(100, Math.max(0, baseScore - rejectionPenalty - criticalPenalty - survivalPenalty))
+    Math.min(100, Math.max(0, baseScore - rejectionPenalty - criticalPenalty - survivalPenalty - overReportingPenalty))
   );
 
   // 5) Calculate Trust Tier
@@ -109,6 +118,7 @@ const calculateTrustScore = async (ngoUserId) => {
     criticalDiscrepancies,
     rejectionCount,
     lowSurvivalAlerts,
+    overReportedCount,
     trustTier,
   };
 };

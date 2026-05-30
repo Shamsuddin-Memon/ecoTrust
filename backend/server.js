@@ -15,6 +15,10 @@ connectDB().then(() => {
   const initAdmin = require('./utils/initAdmin');
   initAdmin();
 
+  // Initialize trust history for approved NGOs
+  const initNGOHistory = require('./utils/initNGOHistory');
+  initNGOHistory();
+
   // Start automated monitoring reminders
   const { initReminderService } = require('./services/reminderService');
   initReminderService();

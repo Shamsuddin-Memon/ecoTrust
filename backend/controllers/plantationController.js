@@ -89,6 +89,20 @@ exports.uploadPlantationData = async (req, res, next) => {
       verificationStatus: 'pending', // Awaiting admin review
     });
 
+    // Recalculate trust score immediately on upload if user enters more trees than AI detects
+    if (userTreeCount > aiResult.treeCount) {
+      try {
+        const { recalculateTrustScore } = require('../services/trustScoreService');
+        await recalculateTrustScore(req.user.id, {
+          projectId,
+          plantationId: plantation._id,
+          reason: `Plantation uploaded: Reported count (${userTreeCount}) is higher than AI detected count (${aiResult.treeCount})`,
+        });
+      } catch (err) {
+        console.error('Immediate trust score recalculation failed:', err.message);
+      }
+    }
+
     // ─── NOTIFY ADMINS ───────────────────────────────────────────
     const admins = await User.find({ role: 'admin' });
     const notifications = admins.map((admin) => ({
@@ -458,10 +472,10 @@ exports.getMyMonitoringStatus = async (req, res, next) => {
     const Monitoring = require('../models/Monitoring');
     const Project = require('../models/Project');
 
-    // Find all approved plantations for this NGO
+    // Find all approved or pending plantations for this NGO to allow development simulation
     const plantations = await Plantation.find({
       ngoId: req.user.id,
-      verificationStatus: 'approved'
+      verificationStatus: { $in: ['approved', 'pending'] }
     }).populate('projectId', 'title category');
 
     const result = [];

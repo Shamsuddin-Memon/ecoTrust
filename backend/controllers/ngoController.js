@@ -100,7 +100,19 @@ exports.approveNGO = async (req, res, next) => {
     }
 
     ngo.status = 'approved';
+    ngo.trustScore = 70;
+    ngo.trustTier = 'Standard (Bronze)';
     await ngo.save();
+
+    // Create initial trust history entry
+    const TrustHistory = require('../models/TrustHistory');
+    await TrustHistory.create({
+      ngoUserId: ngo.createdBy,
+      oldScore: 70,
+      newScore: 70,
+      change: 0,
+      reason: 'NGO registration approved. Initial trust score set to 70.',
+    });
 
     // Change user role from donor to ngo
     const user = await User.findById(ngo.createdBy);
