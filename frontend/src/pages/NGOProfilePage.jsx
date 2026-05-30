@@ -97,9 +97,9 @@ const NGOProfilePage = () => {
     }
   }, [userId, token]);
 
-  // Load Monitoring Reports for Survival Modal
+  // Load Monitoring Reports for Survival & Carbon Footprint
   useEffect(() => {
-    if (showSurvivalModal && projects.length > 0 && token) {
+    if (projects.length > 0 && token) {
       const fetchAllMonitoring = async () => {
         setLoadingMonitoring(true);
         try {
@@ -124,7 +124,97 @@ const NGOProfilePage = () => {
       };
       fetchAllMonitoring();
     }
-  }, [showSurvivalModal, projects, token]);
+  }, [projects, token]);
+
+  // ─── Carbon Footprint Calculations ──────────────────────
+  const carbonStats = (() => {
+    let initialAITrees = 0;
+    let survivingAITrees = 0;
+    const carbonHistory = [];
+
+    projects.forEach((proj) => {
+      const initialCount = proj.fieldData?.aiTreeCount || proj.fieldData?.treeCount || 0;
+      initialAITrees += initialCount;
+
+      // Find the latest monitoring report for this project (reports list is sorted descending by date)
+      const projReport = monitoringReports.find(mr => mr.projectId === proj._id);
+      const latestReport = projReport?.reports?.[0]; // reports[0] is the latest report
+
+      if (latestReport) {
+        survivingAITrees += latestReport.aiTreeCount;
+      } else {
+        survivingAITrees += initialCount;
+      }
+    });
+
+    // Translate to CO2 offset: 22kg per tree per year
+    const initialCO2Kg = initialAITrees * 22;
+    const activeCO2Kg = survivingAITrees * 22;
+
+    // CO2 offset in Tonnes:
+    const initialCO2Tonnes = Math.round((initialCO2Kg / 1000) * 100) / 100;
+    const activeCO2Tonnes = Math.round((activeCO2Kg / 1000) * 100) / 100;
+
+    // Carbon reduction efficiency percentage
+    const efficiency = initialCO2Kg > 0 ? Math.round((activeCO2Kg / initialCO2Kg) * 1000) / 10 : 100;
+
+    // Carbon Rating Grade
+    let ratingGrade = 'New NGO';
+    let ratingColor = 'text-dark-400 bg-dark-700/50 border-dark-600/30';
+    if (initialAITrees > 0) {
+      if (efficiency >= 90 && survivingAITrees >= 500) {
+        ratingGrade = 'A+';
+        ratingColor = 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20';
+      } else if (efficiency >= 80) {
+        ratingGrade = 'A';
+        ratingColor = 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20';
+      } else if (efficiency >= 70) {
+        ratingGrade = 'B';
+        ratingColor = 'text-amber-400 bg-amber-500/10 border-amber-500/20';
+      } else if (efficiency >= 50) {
+        ratingGrade = 'C';
+        ratingColor = 'text-orange-400 bg-orange-500/10 border-orange-500/20';
+      } else {
+        ratingGrade = 'D';
+        ratingColor = 'text-red-400 bg-red-500/10 border-red-500/20';
+      }
+    }
+
+    // Compile carbon history timeline logs from monitoring reports
+    monitoringReports.forEach((projReport) => {
+      projReport.reports.forEach((report) => {
+        const offsetTonnes = Math.round(((report.aiTreeCount * 22) / 1000) * 100) / 100;
+        const initialOffsetTonnes = Math.round(((report.initialTreeCount * 22) / 1000) * 100) / 100;
+        const diff = Math.round((offsetTonnes - initialOffsetTonnes) * 100) / 100;
+
+        carbonHistory.push({
+          id: report._id,
+          projectTitle: projReport.projectTitle,
+          date: new Date(report.createdAt),
+          aiTreeCount: report.aiTreeCount,
+          initialTreeCount: report.initialTreeCount,
+          survivalRate: report.survivalRate,
+          status: report.status,
+          offsetTonnes,
+          diff
+        });
+      });
+    });
+
+    // Sort history by date descending
+    carbonHistory.sort((a, b) => b.date - a.date);
+
+    return {
+      initialAITrees,
+      survivingAITrees,
+      initialCO2Tonnes,
+      activeCO2Tonnes,
+      efficiency,
+      ratingGrade,
+      ratingColor,
+      carbonHistory
+    };
+  })();
 
   if (loading) {
     return (
@@ -230,6 +320,113 @@ const NGOProfilePage = () => {
           )}
         </div>
 
+        {/* 🌿 Dedicated Carbon Footprint & Impact Tracking Section */}
+        <div className="mb-12 rounded-3xl border border-dark-800 bg-dark-900/40 p-6 sm:p-8 shadow-xl relative overflow-hidden animate-slide-up">
+          <div className="absolute top-0 left-0 w-96 h-96 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none"></div>
+          
+          <div className="flex items-center gap-2.5 mb-6 border-b border-dark-800 pb-4">
+            <span className="text-2xl">🌿</span>
+            <div>
+              <h2 className="text-xl font-bold text-white">Environmental Impact & Carbon Footprints</h2>
+              <p className="text-xs text-dark-400 mt-0.5">Objective calculations derived from AI-detected tree baselines and survival tracking history</p>
+            </div>
+          </div>
+
+          {projects.length === 0 ? (
+            <div className="p-8 text-center text-dark-400 text-sm bg-dark-950/40 rounded-2xl border border-dark-800/80">
+              No projects available.
+            </div>
+          ) : (
+            <>
+              {/* Telemetry Stat Cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                {/* Active Carbon Offset */}
+                <div className="bg-dark-950/80 border border-dark-800 p-5 rounded-2xl relative overflow-hidden group shadow-lg">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full blur-2xl group-hover:bg-emerald-500/10 transition-colors"></div>
+                  <p className="text-dark-400 text-xs font-bold uppercase tracking-wider mb-1">Active Carbon Offset</p>
+                  <p className="text-2xl font-black text-emerald-400">{carbonStats.activeCO2Tonnes} <span className="text-xs font-normal text-dark-400">Tonnes / Year</span></p>
+                  <p className="text-[10px] text-dark-500 mt-2 font-mono">CO2 absorbed from environment</p>
+                </div>
+
+                {/* Carbon Rating Grade */}
+                <div className="bg-dark-950/80 border border-dark-800 p-5 rounded-2xl relative overflow-hidden group shadow-lg">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-eco-500/5 rounded-full blur-2xl group-hover:bg-eco-500/10 transition-colors"></div>
+                  <p className="text-dark-400 text-xs font-bold uppercase tracking-wider mb-1">Carbon Rating Grade</p>
+                  <div className="flex items-baseline gap-2 mt-1">
+                    <span className={`px-3 py-1 rounded-lg text-sm font-black uppercase border ${carbonStats.ratingColor}`}>
+                      {carbonStats.ratingGrade}
+                    </span>
+                    <span className="text-[10px] text-dark-400">Rating Grade</span>
+                  </div>
+                  <p className="text-[10px] text-dark-500 mt-2 font-mono">Based on AI tree survival rates</p>
+                </div>
+
+                {/* Carbon Retention Efficiency */}
+                <div className="bg-dark-950/80 border border-dark-800 p-5 rounded-2xl relative overflow-hidden group shadow-lg">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 rounded-full blur-2xl group-hover:bg-amber-500/10 transition-colors"></div>
+                  <p className="text-dark-400 text-xs font-bold uppercase tracking-wider mb-1">Carbon Retention Efficiency</p>
+                  <p className="text-2xl font-black text-white">{carbonStats.efficiency}%</p>
+                  <p className="text-[10px] text-dark-500 mt-2 font-mono">Offset successfully maintained</p>
+                </div>
+
+                {/* Total Contributing Trees */}
+                <div className="bg-dark-950/80 border border-dark-800 p-5 rounded-2xl relative overflow-hidden group shadow-lg">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-teal-500/5 rounded-full blur-2xl group-hover:bg-teal-500/10 transition-colors"></div>
+                  <p className="text-dark-400 text-xs font-bold uppercase tracking-wider mb-1">Surviving AI Trees</p>
+                  <p className="text-2xl font-black text-emerald-400">{carbonStats.survivingAITrees} <span className="text-xs font-normal text-dark-400">trees</span></p>
+                  <p className="text-[10px] text-dark-500 mt-2 font-mono">Active carbon absorbers</p>
+                </div>
+              </div>
+
+              {/* Carbon History Log & Trend */}
+              <div className="space-y-4">
+                <h3 className="text-sm font-bold text-white uppercase tracking-wider border-b border-dark-800 pb-2 flex items-center gap-1.5">
+                  📜 Carbon Rating & Offset History
+                </h3>
+                
+                {carbonStats.carbonHistory.length === 0 ? (
+                  <div className="bg-dark-950/40 border border-dark-800/80 rounded-2xl p-6 text-center text-dark-400 text-sm">
+                    No historic monitoring reports available yet. Footprint reduction is currently at 100% of baseline targets ({carbonStats.activeCO2Tonnes} Tonnes/yr).
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[300px] overflow-y-auto custom-scroll pr-2">
+                    {carbonStats.carbonHistory.map((item) => (
+                      <div key={item.id} className="bg-dark-950/60 border border-dark-800/80 rounded-2xl p-4 flex flex-col justify-between hover:border-emerald-500/30 transition-all gap-4">
+                        <div className="flex justify-between items-start gap-4">
+                          <div>
+                            <h4 className="font-bold text-white text-xs line-clamp-1">{item.projectTitle}</h4>
+                            <p className="text-[10px] text-dark-400 mt-0.5">{item.date.toLocaleDateString()} @ {item.date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                          </div>
+                          <span className={`text-[9px] font-black px-2 py-0.5 rounded border uppercase shrink-0 ${
+                            item.survivalRate >= 70
+                              ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20'
+                              : 'text-red-400 bg-red-500/10 border-red-500/20'
+                          }`}>
+                            {item.survivalRate}% Survival
+                          </span>
+                        </div>
+
+                        <div className="flex justify-between items-center text-xs bg-dark-900/60 p-3 rounded-xl border border-dark-800/40">
+                          <div>
+                            <span className="text-dark-500 text-[9px] uppercase font-bold block">Carbon Offset</span>
+                            <span className="font-black text-white">{item.offsetTonnes} Tonnes CO2/yr</span>
+                          </div>
+                          <div className="text-right">
+                            <span className="text-dark-500 text-[9px] uppercase font-bold block">Offset Adjustment</span>
+                            <span className={`font-black ${item.diff >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                              {item.diff >= 0 ? '+' : ''}{item.diff} Tonnes/yr
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+        </div>
+
         {/* NGO Projects Grid */}
         <div>
           <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-2">
@@ -239,7 +436,7 @@ const NGOProfilePage = () => {
           {projects.length === 0 ? (
             <div className="card-eco p-12 text-center flex flex-col items-center">
               <HiGlobeAlt size={50} className="text-dark-500 mb-4" />
-              <h3 className="text-lg font-bold text-white mb-1">No Active Projects</h3>
+              <h3 className="text-lg font-bold text-white mb-1">No Projects Available</h3>
               <p className="text-dark-400 text-sm">This NGO does not have any approved projects live at the moment.</p>
             </div>
           ) : (

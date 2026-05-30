@@ -304,7 +304,7 @@ const DashboardPage = () => {
         )}
 
         {/* ─── SURVIVAL TRACKING LOG SECTION (All Approved) ─── */}
-        {user?.role === 'ngo' && !currentView && monitoringList.length > 0 && (
+        {user?.role === 'ngo' && !currentView && (
           <div className="mb-10 card-eco p-6 border-dark-800 bg-dark-900/40 relative overflow-hidden animate-slide-up">
             <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
               🌱 Survival Tracking Status & History
@@ -313,56 +313,62 @@ const DashboardPage = () => {
               A comprehensive list of all approved plantations under your management. Use the **Simulate 10m** tool to accelerate testing and trigger updates.
             </p>
 
-            <div className="overflow-x-auto custom-scroll">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="border-b border-dark-800 text-xs font-bold text-dark-400 uppercase tracking-wider">
-                    <th className="pb-3">Project Title</th>
-                    <th className="pb-3">Initial Count</th>
-                    <th className="pb-3">Minutes Elapsed</th>
-                    <th className="pb-3">Status</th>
-                    <th className="pb-3 text-right">Simulation / Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="text-sm text-dark-200">
-                  {monitoringList.map((p) => (
-                    <tr key={p._id} className="border-b border-dark-800/50 hover:bg-dark-900/20">
-                      <td className="py-4 font-bold text-white">{p.projectTitle}</td>
-                      <td className="py-4">{p.treeCount} trees</td>
-                      <td className="py-4 text-dark-300">{p.minutesElapsed} minutes</td>
-                      <td className="py-4">
-                        {p.monitored ? (
-                          <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold border ${
-                            p.monitoringReport.survivalRate >= 70
-                              ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20'
-                              : 'text-red-400 bg-red-500/10 border-red-500/20'
-                          }`}>
-                            Monitored ({p.monitoringReport.survivalRate}%)
-                          </span>
-                        ) : p.needsMonitoring ? (
-                          <span className="text-red-400 bg-red-500/10 border border-red-500/20 px-2.5 py-0.5 rounded-full text-xs font-bold animate-pulse">
-                            Pending Update
-                          </span>
-                        ) : (
-                          <span className="text-dark-400 bg-dark-800/60 border border-dark-700/50 px-2.5 py-0.5 rounded-full text-xs font-semibold">
-                            Monitoring Locked
-                          </span>
-                        )}
-                      </td>
-                      <td className="py-4 text-right">
-                        {/* Simulation trigger */}
-                        <button
-                          onClick={() => handleSimulateTime(p._id)}
-                          className="text-xs bg-dark-800 hover:bg-eco-500/10 hover:text-eco-400 text-dark-300 px-3 py-1.5 rounded-lg border border-dark-700 transition-colors inline-flex items-center gap-1"
-                        >
-                          <HiRefresh size={14} /> Simulate 10m Reset
-                        </button>
-                      </td>
+            {monitoringList.length === 0 ? (
+              <div className="p-8 text-center text-dark-400 text-sm bg-dark-950/40 rounded-2xl border border-dark-800/80">
+                No projects available.
+              </div>
+            ) : (
+              <div className="overflow-x-auto custom-scroll">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="border-b border-dark-800 text-xs font-bold text-dark-400 uppercase tracking-wider">
+                      <th className="pb-3">Project Title</th>
+                      <th className="pb-3">Initial Count</th>
+                      <th className="pb-3">Minutes Elapsed</th>
+                      <th className="pb-3">Status</th>
+                      <th className="pb-3 text-right">Simulation / Actions</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody className="text-sm text-dark-200">
+                    {monitoringList.map((p) => (
+                      <tr key={p._id} className="border-b border-dark-800/50 hover:bg-dark-900/20">
+                        <td className="py-4 font-bold text-white">{p.projectTitle}</td>
+                        <td className="py-4">{p.treeCount} trees</td>
+                        <td className="py-4 text-dark-300">{p.minutesElapsed} minutes</td>
+                        <td className="py-4">
+                          {p.monitored ? (
+                            <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold border ${
+                              p.monitoringReport.survivalRate >= 70
+                                ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20'
+                                : 'text-red-400 bg-red-500/10 border-red-500/20'
+                            }`}>
+                              Monitored ({p.monitoringReport.survivalRate}%)
+                            </span>
+                          ) : p.needsMonitoring ? (
+                            <span className="text-red-400 bg-red-500/10 border border-red-500/20 px-2.5 py-0.5 rounded-full text-xs font-bold animate-pulse">
+                              Pending Update
+                            </span>
+                          ) : (
+                            <span className="text-dark-400 bg-dark-800/60 border border-dark-700/50 px-2.5 py-0.5 rounded-full text-xs font-semibold">
+                              Monitoring Locked
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-4 text-right">
+                          {/* Simulation trigger */}
+                          <button
+                            onClick={() => handleSimulateTime(p._id)}
+                            className="text-xs bg-dark-800 hover:bg-eco-500/10 hover:text-eco-400 text-dark-300 px-3 py-1.5 rounded-lg border border-dark-700 transition-colors inline-flex items-center gap-1"
+                          >
+                            <HiRefresh size={14} /> Simulate 10m Reset
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         )}
 

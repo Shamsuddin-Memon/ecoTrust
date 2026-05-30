@@ -466,8 +466,10 @@ exports.getMyMonitoringStatus = async (req, res, next) => {
 
     const result = [];
     for (const p of plantations) {
+      if (!p.projectId) continue; // Skip orphaned plantations where project has been deleted/missing
+
       const monitoringReport = await Monitoring.findOne({ plantationId: p._id });
-      
+
       const minutesElapsed = (Date.now() - new Date(p.createdAt).getTime()) / (1000 * 60);
       const needsMonitoring = minutesElapsed >= 10 && !monitoringReport;
 
